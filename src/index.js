@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 
 const { v4: uuidv4, validate } = require('uuid');
+const req = require('express/lib/request');
 
 const app = express();
 app.use(express.json());
@@ -10,19 +11,58 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+
+  const {username} = request.headers
+
+  const user = users.find(user => user.username===username);
+
+  if (!user) {
+    return response.status(404).json({error:"conta inexistente"})
+  }
+
+  request.user = user
+  next()
+  
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const {user} = request
+  if(user.pro!==true && user.todos.length>9){
+    return response.status(403).json({error:"Usuário do plano grátis extrapolou limite de tasks"})
+  }
+  next()
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const {username} = request.headers
+  const {id} = request.params
+
+  const user = users.find(user => user.username===username)
+
+  const todo = user.todos.find(todo=>todo.id===id)
+
+  if(todo){
+    request.todo=todo
+    request.user=user
+  }
+
+  if(!todo) {
+    return response.status(404).json({error:"todo nao existe"})
+  }
+  next()
+
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const {id} = request.params
+  const user = users.find(user => user.id === id)
+
+  if(!user){
+    return response.status(404).json({error:"Usuario com id inexistente"})
+  }
+
+request.user = user
+return next();
 }
 
 app.post('/users', (request, response) => {
@@ -80,7 +120,7 @@ app.post('/todos', checksExistsUserAccount, checksCreateTodosUserAvailability, (
     title,
     deadline: new Date(deadline),
     done: false,
-    created_at: new Date()
+    created_at: new Date() 
   };
 
   user.todos.push(newTodo);
